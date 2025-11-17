@@ -1,21 +1,21 @@
 {
   "expo": {
-    "name": "ETH Mobile",
-    "slug": "eth-mobile",
+    "name": "TenTen",
+    "slug": "tenten",
     "version": "0.0.1",
     "orientation": "portrait",
     "icon": "./assets/icons/logo.png",
-    "scheme": "ethmobile",
+    "scheme": "tenten",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "ETH Mobile needs to access your Camera",
-        "NSFaceIDUsageDescription": "ETH Mobile needs to access your Face ID",
-        "NSLocationWhenInUseUsageDescription": "ETH Mobile needs to access your Location",
+        "NSCameraUsageDescription": "TenTen needs to access your Camera",
+        "NSFaceIDUsageDescription": "TenTen needs to access your Face ID",
+        "NSLocationWhenInUseUsageDescription": "TenTen needs to access your Location",
         "ITSAppUsesNonExemptEncryption": false
       },
-      "bundleIdentifier": "com.dewdrip.ethmobile",
+      "bundleIdentifier": "com.dewdrip.tenten",
       "icon": {
         "light": "./assets/icons/ios-light.png",
         "dark": "./assets/icons/ios-dark.png",
@@ -29,7 +29,7 @@
         "backgroundColor": "#ffffff"
       },
       "softwareKeyboardLayoutMode": "pan",
-      "package": "com.dewdrip.ethmobile",
+      "package": "com.dewdrip.tenten",
       "intentFilters": [
         {
           "autoVerify": true,
