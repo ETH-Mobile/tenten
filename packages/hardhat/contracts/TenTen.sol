@@ -134,153 +134,19 @@ contract TenTen is ReentrancyGuard, VRFV2WrapperConsumerBase, ConfirmedOwner {
         emit FeeCollectorSet(oldFeeCollector, _feeCollector);
     }
 
-    function challengeBet(
-        uint256 _id,
-        DataTypes.Choice _choice
-    ) external payable nonReentrant returns (uint256 requestId) {
-        DataTypes.Bet memory bet = s_bets[_id];
-
-        if (bet.bettor == address(0)) {
-            revert TenTen__BetNotFound();
-        }
-        if (bet.state != DataTypes.BetState.PENDING) {
-            revert TenTen__BetNotPending();
-        }
-        if (msg.sender == bet.bettor) {
-            revert TenTen__CannotChallengeOwnBet();
-        }
-        if (msg.value != bet.amount) {
-            revert TenTen__AmountMismatch();
-        }
-        if (choice != DataTypes.Choice.EVEN && choice != DataTypes.Choice.ODD) {
-            revert TenTen__InvalidChoice();
-        }
-        // Ensure challenger chooses the opposite
-        if (choice == bet.choice) {
-            revert TenTen__InvalidChoice();
-        }
-
-        bet.challenger = msg.sender;
-        bet.state = DataTypes.BetState.ACTIVE;
-
-        // Request random number from Chainlink VRF
-        requestId = i_vrfCoordinator.requestRandomWords(
-            i_keyHash,
-            i_subscriptionId,
-            REQUEST_CONFIRMATIONS,
-            i_callbackGasLimit,
-            NUM_WORDS
-        );
-
-        bet.requestId = requestId;
-        s_requestIdToBetId[requestId] = id;
-
-        emit BetChallenged(id, msg.sender);
-        return requestId;
-    }
-
     /**
-     * @notice Callback function called by Chainlink VRF when random number is ready
-     * @param requestId The VRF request ID
-     * @param randomWords Array of random words (we only use the first one)
+     * @notice Withdraw fees (only owner)
      */
-    function rawFulfillRandomWords(uint256 requestId, uint256[] memory randomWords) external {
-        if (msg.sender != address(i_vrfCoordinator)) {
-            revert TenTen__VRFRequestFailed();
-        }
-        fulfillRandomWords(requestId, randomWords);
-    }
-
-    /**
-     * @notice Internal function to process the random words
-     * @param requestId The VRF request ID
-     * @param randomWords Array of random words (we only use the first one)
-     */
-    function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal {
-        uint256 id = s_requestIdToBetId[requestId];
-        DataTypes.Bet storage bet = s_bets[id];
-
-        if (bet.state != DataTypes.BetState.ACTIVE) {
-            return; // Bet already resolved or cancelled
-        }
-
-        uint256 randomNumber = randomWords[0];
-        bool isEven = (randomNumber % 2 == 0);
-
-        // Determine winner
-        address winner;
-        if (isEven && bet.choice == DataTypes.Choice.EVEN) {
-            winner = bet.bettor;
-        } else if (!isEven && bet.choice == DataTypes.Choice.ODD) {
-            winner = bet.bettor;
-        } else {
-            winner = bet.challenger;
-        }
-
-        bet.result = isEven ? DataTypes.Choice.EVEN : DataTypes.Choice.ODD;
-        bet.state = DataTypes.BetState.RESOLVED;
-
-        // Calculate winnings and protocol fee
-        uint256 totalPot = bet.amount * 2;
-        uint256 protocolFee = (totalPot * PROTOCOL_FEE_BPS) / BPS_DENOMINATOR;
-        uint256 winnings = totalPot - protocolFee;
-
-        s_totalProtocolFees += protocolFee;
-
-        // Transfer winnings to winner
-        (bool success, ) = winner.call{ value: winnings }("");
-        if (!success) {
-            revert TenTen__TransferFailed();
-        }
-
-        emit BetResolved(id, winner, winnings, protocolFee, randomNumber);
-    }
-
-    /**
-     * @notice Cancel a pending bet (only by bettor)
-     * @param id The ID of the bet to cancel
-     */
-    function cancelBet(uint256 id) external nonReentrant {
-        DataTypes.Bet storage bet = s_bets[id];
-
-        if (bet.bettor == address(0)) {
-            revert TenTen__BetNotFound();
-        }
-        if (bet.state != DataTypes.BetState.PENDING) {
-            revert TenTen__BetNotPending();
-        }
-        if (msg.sender != bet.bettor) {
-            revert TenTen__BetNotFound(); // Using same error for security
-        }
-
-        bet.state = DataTypes.BetState.CANCELLED;
-
-        // Refund bettor
-        (bool success, ) = bet.bettor.call{ value: bet.amount }("");
-        if (!success) {
-            revert TenTen__TransferFailed();
-        }
-
-        emit BetCancelled(id);
-    }
-
-    /**
-     * @notice Withdraw protocol fees (only owner)
-     */
-    function withdrawProtocolFees() external onlyOwner nonReentrant {
+    function withdrawFees() external onlyOwner {
         uint256 fees = s_totalProtocolFees;
-        if (fees == 0) {
-            revert TenTen__NoFeesToWithdraw();
-        }
+        require(fees > 0, TenTen__NoFeesToWithdraw());
 
         s_totalProtocolFees = 0;
 
-        (bool success, ) = owner().call{ value: fees }("");
-        if (!success) {
-            revert TenTen__TransferFailed();
-        }
+        (bool success, ) = s_feeCollector.call{ value: fees }("");
+        require(success, TenTen__TransferFailed());
 
-        emit ProtocolFeesWithdrawn(owner(), fees);
+        emit FeesWithdrawn(s_feeCollector, fees);
     }
 
     /**
