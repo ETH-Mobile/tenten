@@ -52,10 +52,15 @@ contract TenTen is ReentrancyGuard, VRFV2WrapperConsumerBase, ConfirmedOwner {
 
     event BetCancelled(uint256 indexed id);
 
+    event BetAmountUpdated(uint256 indexed id, uint256 amount);
+
     event FeesWithdrawn(address indexed owner, uint256 amount);
+
+    event FeeCollectorSet(address indexed oldFeeCollector, address indexed newFeeCollector);
 
     // Errors
     error TenTen__ZeroAmount();
+    error TenTen__ZeroAddress();
     error TenTen__BetNotFound();
     error TenTen__BetNotPending();
     error TenTen__BetNotActive();
@@ -74,9 +79,11 @@ contract TenTen is ReentrancyGuard, VRFV2WrapperConsumerBase, ConfirmedOwner {
      */
     constructor(
         address _linkAddress,
-        address _wrapperAddress
+        address _wrapperAddress,
+        address _feeCollector
     ) ConfirmedOwner(msg.sender) VRFV2WrapperConsumerBase(_linkAddress, _wrapperAddress) {
         linkToken = LinkTokenInterface(_linkAddress);
+        s_feeCollector = _feeCollector;
     }
 
     /**
@@ -117,6 +124,14 @@ contract TenTen is ReentrancyGuard, VRFV2WrapperConsumerBase, ConfirmedOwner {
 
         (bool success, ) = bet.bettor.call{ value: bet.amount }("");
         require(success, TenTen__TransferFailed());
+    }
+
+    function setFeeCollector(address _feeCollector) external onlyOwner {
+        require(_feeCollector != address(0), TenTen__ZeroAddress());
+
+        address oldFeeCollector = s_feeCollector;
+        s_feeCollector = _feeCollector;
+        emit FeeCollectorSet(oldFeeCollector, _feeCollector);
     }
 
     function challengeBet(
