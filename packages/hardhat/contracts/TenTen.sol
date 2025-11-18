@@ -65,6 +65,7 @@ contract TenTen is ReentrancyGuard, VRFV2WrapperConsumerBase, ConfirmedOwner {
     error TenTen__VRFRequestFailed();
     error TenTen__TransferFailed();
     error TenTen__NoFeesToWithdraw();
+    error TenTen__MustBeBettor();
 
     /**
      * @notice Constructor
@@ -80,16 +81,12 @@ contract TenTen is ReentrancyGuard, VRFV2WrapperConsumerBase, ConfirmedOwner {
 
     /**
      * @notice Create a new bet
-     * @param choice Player's choice (EVEN or ODD)
+     * @param _choice Player's choice (EVEN or ODD)
      * @return id The ID of the created bet
      */
-    function createBet(DataTypes.Choice choice) external payable returns (uint256 id) {
-        if (msg.value == 0) {
-            revert TenTen__ZeroAmount();
-        }
-        if (choice != DataTypes.Choice.EVEN && choice != DataTypes.Choice.ODD) {
-            revert TenTen__InvalidChoice();
-        }
+    function createBet(DataTypes.Choice _choice) external payable returns (uint256 id) {
+        require(msg.value > 0, TenTen__ZeroAmount());
+        require(_choice == DataTypes.Choice.EVEN || _choice == DataTypes.Choice.ODD, TenTen__InvalidChoice());
 
         id = ++s_betCounter;
 
@@ -98,27 +95,35 @@ contract TenTen is ReentrancyGuard, VRFV2WrapperConsumerBase, ConfirmedOwner {
             bettor: msg.sender,
             challenger: address(0),
             amount: msg.value,
-            choice: choice,
+            choice: _choice,
             state: DataTypes.BetState.PENDING,
             winner: address(0),
             timestamp: block.timestamp
         });
 
-        emit BetCreated({ id: id, bettor: msg.sender, amount: msg.value, choice: choice, timestamp: block.timestamp });
+        emit BetCreated({ id: id, bettor: msg.sender, amount: msg.value, choice: _choice, timestamp: block.timestamp });
         return id;
     }
 
-    /**
-     * @notice Challenge an existing bet
-     * @param id The ID of the bet to challenge
-     * @param choice Player's choice (must be opposite of bettor's choice)
-     * @return requestId The Chainlink VRF request ID
-     */
+    function cancelBet(uint256 _id) external {
+        DataTypes.Bet memory bet = s_bets[_id];
+
+        require(bet.bettor != address(0), TenTen__BetNotFound());
+        require(bet.state == DataTypes.BetState.PENDING, TenTen__BetNotPending());
+        require(msg.sender == bet.bettor, TenTen__MustBeBettor());
+
+        s_bets[_id].state = DataTypes.BetState.CANCELLED;
+        emit BetCancelled(_id);
+
+        (bool success, ) = bet.bettor.call{ value: bet.amount }("");
+        require(success, TenTen__TransferFailed());
+    }
+
     function challengeBet(
-        uint256 id,
-        DataTypes.Choice choice
+        uint256 _id,
+        DataTypes.Choice _choice
     ) external payable nonReentrant returns (uint256 requestId) {
-        DataTypes.Bet storage bet = s_bets[id];
+        DataTypes.Bet memory bet = s_bets[_id];
 
         if (bet.bettor == address(0)) {
             revert TenTen__BetNotFound();
