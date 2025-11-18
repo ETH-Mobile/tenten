@@ -1,7 +1,6 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { ConfirmedOwner } from "@chainlink/contracts/src/v0.8/shared/access/ConfirmedOwner.sol";
 import { VRFV2WrapperConsumerBase } from "@chainlink/contracts/src/v0.8/vrf/VRFV2WrapperConsumerBase.sol";
 import { LinkTokenInterface } from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
@@ -12,11 +11,11 @@ import { DataTypes } from "./DataTypes.sol";
  * @notice A P2P betting game where players bet on random outcomes (Even or Odd)
  * @dev Uses Chainlink VRF V2 for provably fair random number generation
  */
-contract TenTen is ReentrancyGuard, VRFV2WrapperConsumerBase, ConfirmedOwner {
+contract TenTen is VRFV2WrapperConsumerBase, ConfirmedOwner {
     // chainlink vrf config
     uint32 private constant CALLBACK_GAS_LIMIT = 300_000;
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
-    uint32 private constant NUM_WORDS = 2;
+    uint32 private constant NUM_WORDS = 1;
 
     LinkTokenInterface private immutable linkToken;
 
@@ -27,7 +26,7 @@ contract TenTen is ReentrancyGuard, VRFV2WrapperConsumerBase, ConfirmedOwner {
     mapping(uint256 id => DataTypes.Bet bet) private s_bets;
 
     // Mapping from VRF request ID to bet ID
-    mapping(uint256 requestId => uint256 betId) private s_requestIdToBetId;
+    mapping(uint256 requestId => uint256 betId) private s_resultRequests;
 
     // Counter for bet IDs
     uint256 public s_betCounter;
@@ -46,13 +45,11 @@ contract TenTen is ReentrancyGuard, VRFV2WrapperConsumerBase, ConfirmedOwner {
         uint256 timestamp
     );
 
-    event BetChallenged(uint256 indexed id, address indexed challenger);
+    event BetMatched(uint256 indexed id, address indexed challenger);
 
-    event BetResolved(uint256 indexed id, uint256 indexed result, uint256 indexed timestamp);
+    event BetResolved(uint256 indexed id, DataTypes.Choice indexed result, uint256 indexed timestamp);
 
     event BetCancelled(uint256 indexed id);
-
-    event BetAmountUpdated(uint256 indexed id, uint256 amount);
 
     event FeesWithdrawn(address indexed owner, uint256 amount);
 
@@ -71,6 +68,8 @@ contract TenTen is ReentrancyGuard, VRFV2WrapperConsumerBase, ConfirmedOwner {
     error TenTen__TransferFailed();
     error TenTen__NoFeesToWithdraw();
     error TenTen__MustBeBettor();
+    error TenTen__InsufficientLINKTokens(uint256 balance, uint256 paid);
+    error TenTen__BetAlreadyChallenged();
 
     /**
      * @notice Constructor
@@ -110,6 +109,55 @@ contract TenTen is ReentrancyGuard, VRFV2WrapperConsumerBase, ConfirmedOwner {
 
         emit BetCreated({ id: id, bettor: msg.sender, amount: msg.value, choice: _choice, timestamp: block.timestamp });
         return id;
+    }
+
+    function matchBet(uint256 _id) external payable returns (uint256 requestId) {
+        DataTypes.Bet memory bet = s_bets[_id];
+        require(bet.bettor != address(0), TenTen__BetNotFound());
+        require(bet.state == DataTypes.BetState.PENDING, TenTen__BetNotPending());
+        require(msg.value == bet.amount, TenTen__AmountMismatch());
+        require(bet.challenger == address(0), TenTen__BetAlreadyChallenged());
+        require(msg.sender != bet.bettor, TenTen__CannotChallengeOwnBet());
+
+        s_bets[_id].challenger = msg.sender;
+
+        // cost of request
+        uint256 paid = VRF_V2_WRAPPER.calculateRequestPrice(CALLBACK_GAS_LIMIT);
+        uint256 balance = linkToken.balanceOf(address(this));
+
+        // revert if CryptoAnts cannot pay the cost
+        require(balance >= paid, TenTen__InsufficientLINKTokens(balance, paid));
+
+        // request random numbers from chainlink
+        requestId = requestRandomness(CALLBACK_GAS_LIMIT, REQUEST_CONFIRMATIONS, NUM_WORDS);
+        emit BetMatched(_id, msg.sender);
+    }
+
+    function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
+        DataTypes.Bet memory bet = s_bets[s_resultRequests[_requestId]];
+
+        uint256 randomWord = _randomWords[0];
+        bool isEven = randomWord % 2 == 0;
+        DataTypes.Choice resultChoice = isEven ? DataTypes.Choice.EVEN : DataTypes.Choice.ODD;
+
+        address winner;
+        if (bet.choice == resultChoice) {
+            winner = bet.bettor;
+        } else {
+            winner = bet.challenger;
+        }
+
+        // Calculate protocol fee and send to fee collector, pay winner
+        uint256 protocolFee = (bet.amount * PROTOCOL_FEE) / FEE_DENOMINATOR;
+        uint256 payout = (bet.amount * 2) - protocolFee;
+        s_totalProtocolFees += protocolFee;
+
+        s_bets[bet.id].winner = winner;
+
+        emit BetResolved(bet.id, resultChoice, block.timestamp);
+
+        (bool success, ) = winner.call{ value: payout }("");
+        require(success, TenTen__TransferFailed());
     }
 
     function cancelBet(uint256 _id) external {
