@@ -5,13 +5,14 @@ import { ConfirmedOwner } from "@chainlink/contracts/src/v0.8/shared/access/Conf
 import { VRFV2WrapperConsumerBase } from "@chainlink/contracts/src/v0.8/vrf/VRFV2WrapperConsumerBase.sol";
 import { LinkTokenInterface } from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
 import { DataTypes } from "./DataTypes.sol";
+import { ITenTen } from "./ITenTen.sol";
 
 /**
  * @title TenTen
  * @notice A P2P betting game where players bet on random outcomes (Even or Odd)
  * @dev Uses Chainlink VRF V2 for provably fair random number generation
  */
-contract TenTen is VRFV2WrapperConsumerBase, ConfirmedOwner {
+contract TenTen is ITenTen, VRFV2WrapperConsumerBase, ConfirmedOwner {
     // chainlink vrf config
     uint32 private constant CALLBACK_GAS_LIMIT = 300_000;
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
@@ -35,41 +36,6 @@ contract TenTen is VRFV2WrapperConsumerBase, ConfirmedOwner {
     uint256 public s_totalProtocolFees;
 
     address public s_feeCollector;
-
-    // Events
-    event BetCreated(
-        uint256 indexed id,
-        address indexed bettor,
-        uint256 indexed amount,
-        DataTypes.Choice choice,
-        uint256 timestamp
-    );
-
-    event BetMatched(uint256 indexed id, address indexed challenger);
-
-    event BetResolved(uint256 indexed id, DataTypes.Choice indexed result, uint256 indexed timestamp);
-
-    event BetCancelled(uint256 indexed id);
-
-    event FeesWithdrawn(address indexed owner, uint256 amount);
-
-    event FeeCollectorSet(address indexed oldFeeCollector, address indexed newFeeCollector);
-
-    // Errors
-    error TenTen__ZeroAmount();
-    error TenTen__ZeroAddress();
-    error TenTen__BetNotFound();
-    error TenTen__BetNotPending();
-    error TenTen__BetNotActive();
-    error TenTen__CannotChallengeOwnBet();
-    error TenTen__AmountMismatch();
-    error TenTen__InvalidChoice();
-    error TenTen__VRFRequestFailed();
-    error TenTen__TransferFailed();
-    error TenTen__NoFeesToWithdraw();
-    error TenTen__MustBeBettor();
-    error TenTen__InsufficientLINKTokens(uint256 balance, uint256 paid);
-    error TenTen__BetAlreadyChallenged();
 
     /**
      * @notice Constructor
@@ -174,12 +140,12 @@ contract TenTen is VRFV2WrapperConsumerBase, ConfirmedOwner {
         require(success, TenTen__TransferFailed());
     }
 
-    function setFeeCollector(address _feeCollector) external onlyOwner {
-        require(_feeCollector != address(0), TenTen__ZeroAddress());
+    function setFeeCollector(address _newFeeCollector) external onlyOwner {
+        require(_newFeeCollector != address(0), TenTen__ZeroAddress());
 
         address oldFeeCollector = s_feeCollector;
-        s_feeCollector = _feeCollector;
-        emit FeeCollectorSet(oldFeeCollector, _feeCollector);
+        s_feeCollector = _newFeeCollector;
+        emit FeeCollectorSet(oldFeeCollector, _newFeeCollector);
     }
 
     /**
@@ -204,13 +170,5 @@ contract TenTen is VRFV2WrapperConsumerBase, ConfirmedOwner {
      */
     function getBet(uint256 id) external view returns (DataTypes.Bet memory) {
         return s_bets[id];
-    }
-
-    /**
-     * @notice Get the total number of bets created
-     * @return The bet counter
-     */
-    function getBetCount() external view returns (uint256) {
-        return s_betCounter;
     }
 }
