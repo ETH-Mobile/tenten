@@ -54,6 +54,7 @@
     "typescript": "^5.1.6"
   },
   "dependencies": {
+    "@chainlink/contracts": "^1.1.1",
     "@inquirer/password": "^4.0.9",
     "@openzeppelin/contracts": "5.0.2",
     "@typechain/ethers-v6": "^0.5.1",
