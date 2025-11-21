@@ -32,11 +32,11 @@ const ALCHEMY_KEY = 'K18rs5rCTi1A-RDyPUw92tvL7I2cGVUB';
 */
 
 const config: Config = {
-  defaultNetwork: 'hardhat',
+  defaultNetwork: 'localhost',
   // The networks on which your DApp is live
   networks: {
-    hardhat: {
-      name: 'Hardhat',
+    localhost: {
+      name: 'Localhost',
       provider: 'http://172.20.10.3:8545',
       id: 31337,
       token: {

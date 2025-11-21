@@ -36,7 +36,7 @@
           "action": "VIEW",
           "data": {
             "scheme": "https",
-            "host": "ethmobile.io"
+            "host": "tenten.io"
           },
           "category": ["BROWSABLE", "DEFAULT"]
         }
