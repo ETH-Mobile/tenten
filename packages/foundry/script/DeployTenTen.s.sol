@@ -15,6 +15,15 @@ import "../contracts/TenTen.sol";
  * yarn deploy --file DeployTenTen.s.sol --network optimism # live network (requires keystore)
  */
 contract DeployTenTen is ScaffoldETHDeploy {
+    // VRF and TenTen constructor parameters for Optimism mainnet
+    address internal constant VRF_COORDINATOR = 0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625;
+    bytes32 internal constant KEY_HASH = 0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c;
+    uint32 internal constant CALLBACK_GAS_LIMIT = 500_000;
+
+    // The subscription ID should be provided via environment or constructor args in your deployment framework.
+    // For security, do not hardcode production subscription IDs in public repos.
+    // Example: uint256 internal immutable SUBSCRIPTION_ID;
+
     /**
      * @dev Deployer setup based on `LOCALHOST_KEYSTORE_ACCOUNT` in `.env`:
      *      - "eth-mobile-default": Uses Anvil's account #9 (0xa0Ee7A142d267C1f36714E4a8F75612F20a79720), no password prompt
@@ -25,6 +34,10 @@ contract DeployTenTen is ScaffoldETHDeploy {
      *      - Export contract addresses & ABIs to `nextjs` packages
      */
     function run() external ScaffoldEthDeployerRunner {
-        new TenTen(deployer);
+        // Read subscription ID from .env (see forge-std `vm.envUint`)
+        uint256 subscriptionId = vm.envUint("VRF_SUBSCRIPTION_ID");
+        address feeCollector = deployer; // Example: use deployer address
+
+        new TenTen(VRF_COORDINATOR, subscriptionId, KEY_HASH, CALLBACK_GAS_LIMIT, feeCollector);
     }
 }
