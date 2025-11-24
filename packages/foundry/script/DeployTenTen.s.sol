@@ -33,11 +33,10 @@ contract DeployTenTen is ScaffoldETHDeploy {
      *      - Setup correct `deployer` account and fund it
      *      - Export contract addresses & ABIs to `nextjs` packages
      */
-    function run() external ScaffoldEthDeployerRunner {
-        // Read subscription ID from .env (see forge-std `vm.envUint`)
+    function run() external ScaffoldEthDeployerRunner returns (TenTen tenten) {
         uint256 subscriptionId = vm.envUint("VRF_SUBSCRIPTION_ID");
-        address feeCollector = deployer; // Example: use deployer address
+        address feeCollector = deployer;
 
-        new TenTen(VRF_COORDINATOR, subscriptionId, KEY_HASH, CALLBACK_GAS_LIMIT, feeCollector);
+        tenten = new TenTen(VRF_COORDINATOR, subscriptionId, KEY_HASH, CALLBACK_GAS_LIMIT, feeCollector);
     }
 }

@@ -4,6 +4,602 @@
  */
 import { GenericContractsDeclaration } from "../src/utils/eth-mobile/contract";
 
-const deployedContracts = {} as const;
+const deployedContracts = {
+  31337: {
+    TenTen: {
+      address: "0x700b6a60ce7eaaea56f065753d8dcb9653dbad35",
+      abi: [
+        {
+          type: "constructor",
+          inputs: [
+            {
+              name: "_vrfCoordinatorV2Plus",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_subscriptionId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "_keyHash",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "_callbackGasLimit",
+              type: "uint32",
+              internalType: "uint32",
+            },
+            {
+              name: "_feeCollector",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "acceptOwnership",
+          inputs: [],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "cancelBet",
+          inputs: [
+            {
+              name: "_id",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "createBet",
+          inputs: [
+            {
+              name: "_choice",
+              type: "uint8",
+              internalType: "enum DataTypes.Choice",
+            },
+          ],
+          outputs: [
+            {
+              name: "id",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "payable",
+        },
+        {
+          type: "function",
+          name: "getBet",
+          inputs: [
+            {
+              name: "id",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "tuple",
+              internalType: "struct DataTypes.Bet",
+              components: [
+                {
+                  name: "id",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "bettor",
+                  type: "address",
+                  internalType: "address",
+                },
+                {
+                  name: "challenger",
+                  type: "address",
+                  internalType: "address",
+                },
+                {
+                  name: "amount",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "choice",
+                  type: "uint8",
+                  internalType: "enum DataTypes.Choice",
+                },
+                {
+                  name: "state",
+                  type: "uint8",
+                  internalType: "enum DataTypes.BetState",
+                },
+                {
+                  name: "winner",
+                  type: "address",
+                  internalType: "address",
+                },
+                {
+                  name: "timestamp",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+              ],
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "matchBet",
+          inputs: [
+            {
+              name: "_id",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "requestId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "payable",
+        },
+        {
+          type: "function",
+          name: "owner",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "rawFulfillRandomWords",
+          inputs: [
+            {
+              name: "requestId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "randomWords",
+              type: "uint256[]",
+              internalType: "uint256[]",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "s_betCounter",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "s_feeCollector",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "s_totalProtocolFees",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "s_vrfCoordinator",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "contract IVRFCoordinatorV2Plus",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "setCoordinator",
+          inputs: [
+            {
+              name: "_vrfCoordinator",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setFeeCollector",
+          inputs: [
+            {
+              name: "_newFeeCollector",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "transferOwnership",
+          inputs: [
+            {
+              name: "to",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "withdrawFees",
+          inputs: [],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "event",
+          name: "BetCancelled",
+          inputs: [
+            {
+              name: "id",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "BetCreated",
+          inputs: [
+            {
+              name: "id",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "bettor",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "choice",
+              type: "uint8",
+              indexed: false,
+              internalType: "enum DataTypes.Choice",
+            },
+            {
+              name: "timestamp",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "BetMatched",
+          inputs: [
+            {
+              name: "id",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "challenger",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "BetResolved",
+          inputs: [
+            {
+              name: "id",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "result",
+              type: "uint8",
+              indexed: true,
+              internalType: "enum DataTypes.Choice",
+            },
+            {
+              name: "timestamp",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "CoordinatorSet",
+          inputs: [
+            {
+              name: "vrfCoordinator",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "FeeCollectorSet",
+          inputs: [
+            {
+              name: "oldFeeCollector",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "newFeeCollector",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "FeesWithdrawn",
+          inputs: [
+            {
+              name: "owner",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "OwnershipTransferRequested",
+          inputs: [
+            {
+              name: "from",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "to",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "OwnershipTransferred",
+          inputs: [
+            {
+              name: "from",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "to",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "error",
+          name: "OnlyCoordinatorCanFulfill",
+          inputs: [
+            {
+              name: "have",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "want",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "OnlyOwnerOrCoordinator",
+          inputs: [
+            {
+              name: "have",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "owner",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "coordinator",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "TenTen__AmountMismatch",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "TenTen__BetAlreadyChallenged",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "TenTen__BetNotActive",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "TenTen__BetNotFound",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "TenTen__BetNotPending",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "TenTen__CannotChallengeOwnBet",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "TenTen__InsufficientLINKTokens",
+          inputs: [
+            {
+              name: "balance",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "paid",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "TenTen__InvalidChoice",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "TenTen__MustBeBettor",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "TenTen__NoFeesToWithdraw",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "TenTen__TransferFailed",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "TenTen__VRFRequestFailed",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "TenTen__ZeroAddress",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "TenTen__ZeroAmount",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "ZeroAddress",
+          inputs: [],
+        },
+      ],
+      inheritedFunctions: {},
+      deploymentFile: "run-1763999586914.json",
+      deploymentScript: "Deploy.s.sol",
+    },
+  },
+} as const;
 
 export default deployedContracts satisfies GenericContractsDeclaration;
