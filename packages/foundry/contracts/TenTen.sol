@@ -1,9 +1,11 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { ConfirmedOwner } from "@chainlink/contracts/src/v0.8/shared/access/ConfirmedOwner.sol";
-import { VRFV2WrapperConsumerBase } from "@chainlink/contracts/src/v0.8/vrf/VRFV2WrapperConsumerBase.sol";
-import { LinkTokenInterface } from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
+import {
+    VRFConsumerBaseV2Plus,
+    IVRFCoordinatorV2Plus
+} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
+import { VRFV2PlusClient } from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 import { DataTypes } from "./DataTypes.sol";
 import { ITenTen } from "./ITenTen.sol";
 
@@ -12,17 +14,18 @@ import { ITenTen } from "./ITenTen.sol";
  * @notice A P2P betting game where players bet on random outcomes (Even or Odd)
  * @dev Uses Chainlink VRF V2 for provably fair random number generation
  */
-contract TenTen is ITenTen, VRFV2WrapperConsumerBase, ConfirmedOwner {
-    // chainlink vrf config
-    uint32 private constant CALLBACK_GAS_LIMIT = 300_000;
+contract TenTen is ITenTen, VRFConsumerBaseV2Plus {
+    // Protocol fee (2% = 200 basis points)
+    uint256 private constant PROTOCOL_FEE = 200;
+    uint256 private constant FEE_DENOMINATOR = 10000;
+
+    // VRF Configuration
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
-
-    LinkTokenInterface private immutable linkToken;
-
-    // Protocol fee (2% = 200 basis points)
-    uint256 private constant PROTOCOL_FEE = 200; // 2%
-    uint256 private constant FEE_DENOMINATOR = 10000;
+    IVRFCoordinatorV2Plus private immutable i_vrfCoordinator;
+    uint256 private immutable i_subscriptionId;
+    bytes32 private immutable i_keyHash;
+    uint32 private immutable i_callbackGasLimit;
 
     mapping(uint256 id => DataTypes.Bet bet) private s_bets;
 
@@ -39,15 +42,21 @@ contract TenTen is ITenTen, VRFV2WrapperConsumerBase, ConfirmedOwner {
 
     /**
      * @notice Constructor
-     * @param _linkAddress Address of the Link token
-     * @param _wrapperAddress Address of the VRFV2Wrapper
+     **
+     * @param _vrfCoordinatorV2Plus The address of the Chainlink VRF V2 Plus coordinator contract.
+     * @param _feeCollector The address where collected protocol fees will be sent.
      */
-    constructor(address _linkAddress, address _wrapperAddress, address _feeCollector)
-        ConfirmedOwner(msg.sender)
-        VRFV2WrapperConsumerBase(_linkAddress, _wrapperAddress)
-    {
-        linkToken = LinkTokenInterface(_linkAddress);
+    constructor(
+        address _vrfCoordinatorV2Plus,
+        address _feeCollector,
+        uint256 _subscriptionId,
+        bytes32 _keyHash,
+        uint32 _callbackGasLimit
+    ) VRFConsumerBaseV2Plus(_vrfCoordinatorV2Plus) {
         s_feeCollector = _feeCollector;
+        i_subscriptionId = _subscriptionId;
+        i_keyHash = _keyHash;
+        i_callbackGasLimit = _callbackGasLimit;
     }
 
     /**
@@ -86,19 +95,24 @@ contract TenTen is ITenTen, VRFV2WrapperConsumerBase, ConfirmedOwner {
 
         s_bets[_id].challenger = msg.sender;
 
-        // cost of request
-        uint256 paid = VRF_V2_WRAPPER.calculateRequestPrice(CALLBACK_GAS_LIMIT);
-        uint256 balance = linkToken.balanceOf(address(this));
+        // Request random words from Chainlink VRF v2Plus
+        requestId = i_vrfCoordinator.requestRandomWords(
+            VRFV2PlusClient.RandomWordsRequest({
+                keyHash: i_keyHash,
+                subId: i_subscriptionId,
+                requestConfirmations: REQUEST_CONFIRMATIONS,
+                callbackGasLimit: i_callbackGasLimit,
+                numWords: NUM_WORDS,
+                extraArgs: VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({ nativePayment: false }))
+            })
+        );
 
-        // revert if CryptoAnts cannot pay the cost
-        require(balance >= paid, TenTen__InsufficientLINKTokens(balance, paid));
+        s_resultRequests[requestId] = bet.id;
 
-        // request random numbers from chainlink
-        requestId = requestRandomness(CALLBACK_GAS_LIMIT, REQUEST_CONFIRMATIONS, NUM_WORDS);
         emit BetMatched(_id, msg.sender);
     }
 
-    function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
+    function fulfillRandomWords(uint256 _requestId, uint256[] calldata _randomWords) internal override {
         DataTypes.Bet memory bet = s_bets[s_resultRequests[_requestId]];
 
         uint256 randomWord = _randomWords[0];

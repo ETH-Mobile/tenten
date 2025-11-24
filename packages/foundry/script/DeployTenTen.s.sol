@@ -2,19 +2,19 @@
 pragma solidity ^0.8.19;
 
 import "./DeployHelpers.s.sol";
-import "../contracts/YourContract.sol";
+import "../contracts/TenTen.sol";
 
 /**
- * @notice Deploy script for YourContract contract
+ * @notice Deploy script for TenTen contract
  * @dev Inherits ScaffoldETHDeploy which:
  *      - Includes forge-std/Script.sol for deployment
  *      - Includes ScaffoldEthDeployerRunner modifier
  *      - Provides `deployer` variable
  * Example:
- * yarn deploy --file DeployYourContract.s.sol  # local anvil chain
- * yarn deploy --file DeployYourContract.s.sol --network optimism # live network (requires keystore)
+ * yarn deploy --file DeployTenTen.s.sol  # local anvil chain
+ * yarn deploy --file DeployTenTen.s.sol --network optimism # live network (requires keystore)
  */
-contract DeployYourContract is ScaffoldETHDeploy {
+contract DeployTenTen is ScaffoldETHDeploy {
     /**
      * @dev Deployer setup based on `LOCALHOST_KEYSTORE_ACCOUNT` in `.env`:
      *      - "eth-mobile-default": Uses Anvil's account #9 (0xa0Ee7A142d267C1f36714E4a8F75612F20a79720), no password prompt
@@ -25,6 +25,6 @@ contract DeployYourContract is ScaffoldETHDeploy {
      *      - Export contract addresses & ABIs to `nextjs` packages
      */
     function run() external ScaffoldEthDeployerRunner {
-        new YourContract(deployer);
+        new TenTen(deployer);
     }
 }
