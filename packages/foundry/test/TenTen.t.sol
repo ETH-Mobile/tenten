@@ -16,7 +16,7 @@ contract TenTenTest is Test {
     );
 
     function setUp() public {
-        vm.createSelectFork(vm.rpcUrl("sepolia"), FORK_BLOCK);
+        vm.createSelectFork(vm.rpcUrl("sepolia"));
 
         DeployTenTen deployTenTen = new DeployTenTen();
 
@@ -24,6 +24,26 @@ contract TenTenTest is Test {
     }
 
     function testCreateBetStoresStateAndEmitsEvent() public {
+        createBet();
+    }
+
+    function testMatchBet() public {
+        createBet();
+
+        address challenger = makeAddr("challenger");
+        uint256 stake = 1 ether;
+        vm.deal(challenger, stake);
+        vm.warp(12345678);
+
+        vm.prank(challenger);
+        tenten.matchBet{ value: stake }(1);
+
+        DataTypes.Bet memory bet = tenten.getBet(1);
+        assertEq(bet.id, 1, "bet id mismatch");
+        assertEq(bet.challenger, challenger, "challenger mismatch");
+    }
+
+    function createBet() internal {
         address bettor = makeAddr("bettor");
         uint256 stake = 1 ether;
         vm.deal(bettor, stake);

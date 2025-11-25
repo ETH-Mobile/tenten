@@ -53,6 +53,7 @@ contract TenTen is ITenTen, VRFConsumerBaseV2Plus {
         uint32 _callbackGasLimit,
         address _feeCollector
     ) VRFConsumerBaseV2Plus(_vrfCoordinatorV2Plus) {
+        i_vrfCoordinator = IVRFCoordinatorV2Plus(_vrfCoordinatorV2Plus);
         s_feeCollector = _feeCollector;
         i_subscriptionId = _subscriptionId;
         i_keyHash = _keyHash;
