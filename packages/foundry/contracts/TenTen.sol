@@ -1,36 +1,25 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {
-    VRFConsumerBaseV2Plus,
-    IVRFCoordinatorV2Plus
-} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
-import { VRFV2PlusClient } from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
-import { DataTypes } from "./DataTypes.sol";
-import { ITenTen } from "./ITenTen.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+
+import { DataTypes } from "./libraries/DataTypes.sol";
+import { PRNG } from "./libraries/PRNG.sol";
+import { ITenTen } from "./interfaces/ITenTen.sol";
+
+import { console } from "forge-std/console.sol";
 
 /**
  * @title TenTen
  * @notice A P2P betting game where players bet on random outcomes (Even or Odd)
- * @dev Uses Chainlink VRF V2 for provably fair random number generation
+ * @dev Uses a pseudo-random number generator (PRNG) for randomness.
  */
-contract TenTen is ITenTen, VRFConsumerBaseV2Plus {
+contract TenTen is ITenTen, Ownable {
     // Protocol fee (2% = 200 basis points)
     uint256 private constant PROTOCOL_FEE = 200;
     uint256 private constant FEE_DENOMINATOR = 10000;
 
-    // VRF Configuration
-    uint16 private constant REQUEST_CONFIRMATIONS = 3;
-    uint32 private constant NUM_WORDS = 1;
-    IVRFCoordinatorV2Plus private immutable i_vrfCoordinator;
-    uint256 private immutable i_subscriptionId;
-    bytes32 private immutable i_keyHash;
-    uint32 private immutable i_callbackGasLimit;
-
     mapping(uint256 id => DataTypes.Bet bet) private s_bets;
-
-    // Mapping from VRF request ID to bet ID
-    mapping(uint256 requestId => uint256 betId) private s_resultRequests;
 
     // Counter for bet IDs
     uint256 public s_betCounter;
@@ -42,22 +31,10 @@ contract TenTen is ITenTen, VRFConsumerBaseV2Plus {
 
     /**
      * @notice Constructor
-     **
-     * @param _vrfCoordinatorV2Plus The address of the Chainlink VRF V2 Plus coordinator contract.
      * @param _feeCollector The address where collected protocol fees will be sent.
      */
-    constructor(
-        address _vrfCoordinatorV2Plus,
-        uint256 _subscriptionId,
-        bytes32 _keyHash,
-        uint32 _callbackGasLimit,
-        address _feeCollector
-    ) VRFConsumerBaseV2Plus(_vrfCoordinatorV2Plus) {
-        i_vrfCoordinator = IVRFCoordinatorV2Plus(_vrfCoordinatorV2Plus);
+    constructor(address _feeCollector) Ownable(msg.sender) {
         s_feeCollector = _feeCollector;
-        i_subscriptionId = _subscriptionId;
-        i_keyHash = _keyHash;
-        i_callbackGasLimit = _callbackGasLimit;
     }
 
     /**
@@ -86,7 +63,7 @@ contract TenTen is ITenTen, VRFConsumerBaseV2Plus {
         return id;
     }
 
-    function matchBet(uint256 _id) external payable returns (uint256 requestId) {
+    function matchBet(uint256 _id) external payable returns (uint256 randomNumber) {
         DataTypes.Bet memory bet = s_bets[_id];
         require(bet.bettor != address(0), TenTen__BetNotFound());
         require(bet.state == DataTypes.BetState.PENDING, TenTen__BetNotPending());
@@ -96,35 +73,20 @@ contract TenTen is ITenTen, VRFConsumerBaseV2Plus {
 
         s_bets[_id].challenger = msg.sender;
 
-        // Request random words from Chainlink VRF v2Plus
-        requestId = i_vrfCoordinator.requestRandomWords(
-            VRFV2PlusClient.RandomWordsRequest({
-                keyHash: i_keyHash,
-                subId: i_subscriptionId,
-                requestConfirmations: REQUEST_CONFIRMATIONS,
-                callbackGasLimit: i_callbackGasLimit,
-                numWords: NUM_WORDS,
-                extraArgs: VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({ nativePayment: false }))
-            })
-        );
+        // Resolve the bet immediately using PRNG-based randomness.
+        // We keep the `randomNumber` return value for ABI compatibility; it now holds
+        // the raw random number used to derive the outcome.
+        bytes32 seed = keccak256(abi.encodePacked(_id, bet.bettor, msg.sender, block.timestamp));
+        randomNumber = PRNG.randomNumber(seed);
 
-        s_resultRequests[requestId] = bet.id;
-
-        emit BetMatched(_id, msg.sender);
-    }
-
-    function fulfillRandomWords(uint256 _requestId, uint256[] calldata _randomWords) internal override {
-        DataTypes.Bet memory bet = s_bets[s_resultRequests[_requestId]];
-
-        uint256 randomWord = _randomWords[0];
-        bool isEven = randomWord % 2 == 0;
+        bool isEven = randomNumber % 2 == 0;
         DataTypes.Choice resultChoice = isEven ? DataTypes.Choice.EVEN : DataTypes.Choice.ODD;
 
         address winner;
         if (bet.choice == resultChoice) {
             winner = bet.bettor;
         } else {
-            winner = bet.challenger;
+            winner = msg.sender;
         }
 
         // Calculate protocol fee and send to fee collector, pay winner
@@ -138,6 +100,8 @@ contract TenTen is ITenTen, VRFConsumerBaseV2Plus {
 
         (bool success,) = winner.call{ value: payout }("");
         require(success, TenTen__TransferFailed());
+
+        emit BetMatched(_id, msg.sender);
     }
 
     function cancelBet(uint256 _id) external {

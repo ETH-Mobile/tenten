@@ -1,11 +1,11 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { DataTypes } from "./DataTypes.sol";
+import { DataTypes } from "../libraries/DataTypes.sol";
 
 /**
  * @title ITenTen
- * @notice Interface for the TenTen peer-to-peer betting game powered by Chainlink VRF
+ * @notice Interface for the TenTen peer-to-peer betting game using a PRNG-based randomness source.
  */
 interface ITenTen {
     /*//////////////////////////////////////////////////////////////
@@ -20,7 +20,7 @@ interface ITenTen {
     /// @notice Emitted when a challenger matches an existing wager.
     event BetMatched(uint256 indexed id, address indexed challenger);
 
-    /// @notice Emitted after Chainlink VRF resolves a bet.
+    /// @notice Emitted after randomness resolves a bet.
     event BetResolved(uint256 indexed id, DataTypes.Choice indexed result, uint256 indexed timestamp);
 
     /// @notice Emitted when a bettor cancels their pending wager.
@@ -44,7 +44,6 @@ interface ITenTen {
     error TenTen__CannotChallengeOwnBet();
     error TenTen__AmountMismatch();
     error TenTen__InvalidChoice();
-    error TenTen__VRFRequestFailed();
     error TenTen__TransferFailed();
     error TenTen__NoFeesToWithdraw();
     error TenTen__MustBeBettor();
@@ -65,7 +64,7 @@ interface ITenTen {
     /**
      * @notice Challenge an existing bet by matching its stake.
      * @param _id Identifier of the bet to match.
-     * @return requestId Chainlink VRF request identifier tied to this bet resolution.
+     * @return requestId Pseudo-random value used internally to derive the outcome.
      */
     function matchBet(uint256 _id) external payable returns (uint256 requestId);
 
