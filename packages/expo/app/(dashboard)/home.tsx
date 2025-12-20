@@ -48,6 +48,10 @@ export default function Home() {
   const [showLoseModal, setShowLoseModal] = useState(false);
   const [showPlaceBetModal, setShowPlaceBetModal] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [betWinners, setBetWinners] = useState<Map<string, string>>(new Map());
+  const [betChallengers, setBetChallengers] = useState<Map<string, string>>(
+    new Map()
+  );
 
   const account = useAccount();
   const network = useNetwork();
@@ -222,6 +226,79 @@ export default function Home() {
     }
   }, [balance, price]);
 
+  // Fetch winners and challengers for resolved bets
+  useEffect(() => {
+    if (!deployedContractData || !resolvedEvents) return;
+
+    const fetchBetData = async () => {
+      const provider = new JsonRpcProvider(network.provider);
+      const contract = new Contract(
+        deployedContractData.address,
+        deployedContractData.abi as any,
+        provider
+      );
+
+      const betIds = resolvedEvents
+        .map(ev => {
+          const args = ev.args || [];
+          return args.length > 0 ? String(args[0]) : null;
+        })
+        .filter(Boolean) as string[];
+
+      // Fetch all bet data in parallel
+      const betDataPromises = betIds.map(betId =>
+        contract
+          .getBet(betId)
+          .then((betData: any) => ({ betId, betData }))
+          .catch((error: any) => {
+            console.error(`Error fetching bet ${betId}:`, error);
+            return null;
+          })
+      );
+
+      const results = await Promise.all(betDataPromises);
+
+      const newWinners = new Map<string, string>();
+      const newChallengers = new Map<string, string>();
+
+      results.forEach(result => {
+        if (!result) return;
+        const { betId, betData } = result;
+        if (betData) {
+          if (betData.winner) {
+            newWinners.set(betId, String(betData.winner));
+          }
+          if (betData.challenger) {
+            newChallengers.set(betId, String(betData.challenger));
+          }
+        }
+      });
+
+      // Update state
+      if (newWinners.size > 0) {
+        setBetWinners(prev => {
+          const updated = new Map(prev);
+          newWinners.forEach((winner, betId) => {
+            updated.set(betId, winner);
+          });
+          return updated;
+        });
+      }
+
+      if (newChallengers.size > 0) {
+        setBetChallengers(prev => {
+          const updated = new Map(prev);
+          newChallengers.forEach((challenger, betId) => {
+            updated.set(betId, challenger);
+          });
+          return updated;
+        });
+      }
+    };
+
+    fetchBetData();
+  }, [resolvedEvents, deployedContractData, network.provider]);
+
   const handlePlaceBet = async (choice: Choice, amount: string) => {
     if (!amount || Number(amount) <= 0 || isCreating) return;
 
@@ -392,23 +469,49 @@ export default function Home() {
             filteredBets
               .slice()
               .reverse()
-              .map(bet => (
-                <Bet
-                  key={bet.id.toString()}
-                  bet={bet}
-                  currentAddress={account?.address}
-                  isMatching={
-                    matchingBetId !== null && matchingBetId === bet.id
+              .map(bet => {
+                const betIdStr = bet.id.toString();
+                const isResolved = resolvedBetIds.has(betIdStr);
+                const winner = isResolved ? betWinners.get(betIdStr) : null;
+                const challenger = isResolved
+                  ? betChallengers.get(betIdStr)
+                  : null;
+
+                // Determine result: 'win', 'lose', or null (for cancelled bets or if user didn't participate)
+                let result: 'win' | 'lose' | null = null;
+                if (isResolved && account?.address) {
+                  const isUserBettor =
+                    bet.bettor.toLowerCase() === account.address.toLowerCase();
+                  const isUserChallenger =
+                    challenger?.toLowerCase() === account.address.toLowerCase();
+
+                  // User participated if they were the bettor or the challenger
+                  if (isUserBettor || isUserChallenger) {
+                    const isUserWinner =
+                      winner?.toLowerCase() === account.address.toLowerCase();
+                    result = isUserWinner ? 'win' : 'lose';
                   }
-                  isCancelling={
-                    cancellingBetId !== null && cancellingBetId === bet.id
-                  }
-                  onMatch={handleMatchBet}
-                  onCancel={handleCancelBet}
-                  price={price}
-                  isHistory={activeTab === 'HISTORY'}
-                />
-              ))
+                }
+
+                return (
+                  <Bet
+                    key={bet.id.toString()}
+                    bet={bet}
+                    currentAddress={account?.address}
+                    isMatching={
+                      matchingBetId !== null && matchingBetId === bet.id
+                    }
+                    isCancelling={
+                      cancellingBetId !== null && cancellingBetId === bet.id
+                    }
+                    onMatch={handleMatchBet}
+                    onCancel={handleCancelBet}
+                    price={price}
+                    isHistory={activeTab === 'HISTORY'}
+                    result={result}
+                  />
+                );
+              })
           )}
         </View>
       </ScrollView>

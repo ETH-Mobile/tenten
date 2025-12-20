@@ -1,5 +1,5 @@
 import { parseBalance, truncateAddress } from '@/utils/eth-mobile';
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 
@@ -19,7 +19,8 @@ export default function Bet({
   isMatching,
   isCancelling,
   price,
-  isHistory = false
+  isHistory = false,
+  result = null
 }: {
   bet: BetEvent;
   currentAddress?: string;
@@ -29,6 +30,7 @@ export default function Bet({
   isCancelling?: boolean;
   price: number | null;
   isHistory?: boolean;
+  result?: 'win' | 'lose' | null;
 }) {
   const isMyBet =
     currentAddress && bet.bettor.toLowerCase() === currentAddress.toLowerCase();
@@ -63,9 +65,20 @@ export default function Bet({
     >
       <View className="flex-row items-start justify-between">
         <View className="flex-1">
-          <Text className="text-lg font-semibold font-[Poppins] text-gray-900 mb-1">
-            {choiceLabel}
-          </Text>
+          <View className="flex-row items-center gap-x-2 mb-1">
+            {isHistory && result && (
+              <Ionicons
+                name={
+                  result === 'win' ? 'trophy-outline' : 'close-circle-outline'
+                }
+                size={24}
+                color={result === 'win' ? '#16a34a' : '#ef4444'}
+              />
+            )}
+            <Text className="text-lg font-semibold font-[Poppins] text-gray-900">
+              {choiceLabel}
+            </Text>
+          </View>
           <Text className="text-2xl font-bold font-[Poppins] text-gray-900 mb-3">
             ${usdAmount || betAmount}
           </Text>
