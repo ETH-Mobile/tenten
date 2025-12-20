@@ -42,6 +42,7 @@ type BetEvent = {
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabType>('ACTIVE');
   const [matchingBetId, setMatchingBetId] = useState<bigint | null>(null);
+  const [cancellingBetId, setCancellingBetId] = useState<bigint | null>(null);
   const [showWinModal, setShowWinModal] = useState(false);
   const [showLoseModal, setShowLoseModal] = useState(false);
   const [showPlaceBetModal, setShowPlaceBetModal] = useState(false);
@@ -133,18 +134,34 @@ export default function Home() {
 
   const filteredBets = useMemo(() => {
     if (activeTab === 'ACTIVE') {
+      // Show only bets created by the connected account that are still pending
       return bets.filter(bet => {
         const isMyBet =
           account?.address &&
           bet.bettor.toLowerCase() === account.address.toLowerCase();
-        return !isMyBet;
+        const betIdStr = bet.id.toString();
+        const isPending =
+          !resolvedBetIds.has(betIdStr) && !cancelledBetIds.has(betIdStr);
+        return isMyBet && isPending;
       });
     }
     if (activeTab === 'ALL') {
-      // Only show pending bets (not resolved or cancelled)
+      // Show all pending bets that are NOT created by the user (matchable bets)
+      return bets.filter(bet => {
+        const isMyBet =
+          account?.address &&
+          bet.bettor.toLowerCase() === account.address.toLowerCase();
+        const betIdStr = bet.id.toString();
+        const isPending =
+          !resolvedBetIds.has(betIdStr) && !cancelledBetIds.has(betIdStr);
+        return !isMyBet && isPending;
+      });
+    }
+    if (activeTab === 'HISTORY') {
+      // Show resolved or cancelled bets
       return bets.filter(bet => {
         const betIdStr = bet.id.toString();
-        return !resolvedBetIds.has(betIdStr) && !cancelledBetIds.has(betIdStr);
+        return resolvedBetIds.has(betIdStr) || cancelledBetIds.has(betIdStr);
       });
     }
     return bets;
@@ -222,6 +239,22 @@ export default function Home() {
       // Reverts and errors are handled by write hook toasts
     } finally {
       setMatchingBetId(null);
+    }
+  };
+
+  const handleCancelBet = async (bet: BetEvent) => {
+    if (cancellingBetId || !deployedContractData) return;
+    try {
+      setCancellingBetId(bet.id);
+
+      await writeContractAsync({
+        functionName: 'cancelBet',
+        args: [bet.id]
+      });
+    } catch (e) {
+      // Reverts and errors are handled by write hook toasts
+    } finally {
+      setCancellingBetId(null);
     }
   };
 
@@ -315,8 +348,13 @@ export default function Home() {
                   isMatching={
                     matchingBetId !== null && matchingBetId === bet.id
                   }
+                  isCancelling={
+                    cancellingBetId !== null && cancellingBetId === bet.id
+                  }
                   onMatch={handleMatchBet}
+                  onCancel={handleCancelBet}
                   price={price}
+                  isHistory={activeTab === 'HISTORY'}
                 />
               ))
           )}

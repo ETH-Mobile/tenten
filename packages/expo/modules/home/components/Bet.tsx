@@ -15,14 +15,20 @@ export default function Bet({
   bet,
   currentAddress,
   onMatch,
+  onCancel,
   isMatching,
-  price
+  isCancelling,
+  price,
+  isHistory = false
 }: {
   bet: BetEvent;
   currentAddress?: string;
   onMatch: (bet: BetEvent) => void;
+  onCancel?: (bet: BetEvent) => void;
   isMatching: boolean;
+  isCancelling?: boolean;
   price: number | null;
+  isHistory?: boolean;
 }) {
   const isMyBet =
     currentAddress && bet.bettor.toLowerCase() === currentAddress.toLowerCase();
@@ -51,8 +57,8 @@ export default function Bet({
 
   return (
     <TouchableOpacity
-      disabled={isMyBet || isMatching}
-      onPress={() => !isMyBet && onMatch(bet)}
+      disabled={isHistory || isMyBet || isMatching}
+      onPress={() => !isHistory && !isMyBet && !isMatching && onMatch(bet)}
       className="w-full bg-white border border-gray-200 rounded-2xl p-4 mb-3 shadow-sm"
     >
       <View className="flex-row items-start justify-between">
@@ -76,18 +82,36 @@ export default function Bet({
         <Text className="text-sm text-gray-600 font-[Poppins]">
           Placed by {truncateAddress(bet.bettor)} on {formattedDate}
         </Text>
-        {!isMyBet && (
-          <TouchableOpacity
-            onPress={() => onMatch(bet)}
-            disabled={isMatching}
-            className="p-2"
-          >
-            {isMatching ? (
-              <ActivityIndicator size="small" color="#36C566" />
+        {!isHistory && (
+          <View className="flex-row items-center gap-x-3">
+            {isMyBet && onCancel ? (
+              <TouchableOpacity
+                onPress={() => onCancel(bet)}
+                disabled={isCancelling}
+                className="p-2"
+              >
+                {isCancelling ? (
+                  <ActivityIndicator size="small" color="#EF4444" />
+                ) : (
+                  <FontAwesome name="times-circle" size={20} color="#EF4444" />
+                )}
+              </TouchableOpacity>
             ) : (
-              <FontAwesome name="handshake-o" size={20} color="#36C566" />
+              !isMyBet && (
+                <TouchableOpacity
+                  onPress={() => onMatch(bet)}
+                  disabled={isMatching}
+                  className="p-2"
+                >
+                  {isMatching ? (
+                    <ActivityIndicator size="small" color="#36C566" />
+                  ) : (
+                    <FontAwesome name="handshake-o" size={20} color="#36C566" />
+                  )}
+                </TouchableOpacity>
+              )
             )}
-          </TouchableOpacity>
+          </View>
         )}
       </View>
     </TouchableOpacity>
