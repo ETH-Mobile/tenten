@@ -69,6 +69,20 @@ export default function Home() {
     watch: true
   });
 
+  const { data: resolvedEvents } = useScaffoldEventHistory({
+    contractName: 'TenTen',
+    eventName: 'BetResolved',
+    fromBlock: 0n,
+    watch: true
+  });
+
+  const { data: cancelledEvents } = useScaffoldEventHistory({
+    contractName: 'TenTen',
+    eventName: 'BetCancelled',
+    fromBlock: 0n,
+    watch: true
+  });
+
   const { writeContractAsync } = useScaffoldWriteContract({
     contractName: 'TenTen'
   });
@@ -90,6 +104,33 @@ export default function Home() {
       .filter(Boolean) as BetEvent[];
   }, [events]);
 
+  // Get sets of resolved and cancelled bet IDs
+  const resolvedBetIds = useMemo(() => {
+    if (!resolvedEvents) return new Set<string>();
+    return new Set(
+      resolvedEvents
+        .map(ev => {
+          const args = ev.args || [];
+          if (args.length < 1) return null;
+          return String(args[0]);
+        })
+        .filter(Boolean) as string[]
+    );
+  }, [resolvedEvents]);
+
+  const cancelledBetIds = useMemo(() => {
+    if (!cancelledEvents) return new Set<string>();
+    return new Set(
+      cancelledEvents
+        .map(ev => {
+          const args = ev.args || [];
+          if (args.length < 1) return null;
+          return String(args[0]);
+        })
+        .filter(Boolean) as string[]
+    );
+  }, [cancelledEvents]);
+
   const filteredBets = useMemo(() => {
     if (activeTab === 'ACTIVE') {
       return bets.filter(bet => {
@@ -99,8 +140,15 @@ export default function Home() {
         return !isMyBet;
       });
     }
+    if (activeTab === 'ALL') {
+      // Only show pending bets (not resolved or cancelled)
+      return bets.filter(bet => {
+        const betIdStr = bet.id.toString();
+        return !resolvedBetIds.has(betIdStr) && !cancelledBetIds.has(betIdStr);
+      });
+    }
     return bets;
-  }, [bets, activeTab, account?.address]);
+  }, [bets, activeTab, account?.address, resolvedBetIds, cancelledBetIds]);
 
   const balanceUSD = useMemo(() => {
     if (!balance || !price) return null;
