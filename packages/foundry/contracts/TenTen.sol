@@ -95,6 +95,7 @@ contract TenTen is ITenTen, Ownable {
         s_totalProtocolFees += protocolFee;
 
         s_bets[bet.id].winner = winner;
+        s_bets[bet.id].state = DataTypes.BetState.RESOLVED;
 
         emit BetResolved(bet.id, resultChoice, block.timestamp);
 

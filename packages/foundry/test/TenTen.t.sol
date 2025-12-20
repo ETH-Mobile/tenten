@@ -52,6 +52,7 @@ contract TenTenTest is Test {
         DataTypes.Bet memory bet = tenten.getBet(1);
         assertEq(bet.id, 1, "bet id mismatch");
         assertEq(bet.challenger, challenger, "challenger mismatch");
+        assertEq(uint8(bet.state), uint8(DataTypes.BetState.RESOLVED), "state mismatch");
         assertTrue(bet.winner == bettor || bet.winner == challenger, "winner must be either bettor or challenger");
 
         // Protocol fee and payout expectations (mirrors TenTen.sol logic)
