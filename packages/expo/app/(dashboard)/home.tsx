@@ -8,10 +8,13 @@ import {
   useScaffoldEventHistory,
   useScaffoldWriteContract
 } from '@/hooks/eth-mobile';
+import Bet from '@/modules/home/components/Bet';
+import TabButton from '@/modules/home/components/TabButton';
+import ResultModal from '@/modules/home/modals/ResultModal';
 import Device from '@/utils/device';
-import { parseBalance, truncateAddress } from '@/utils/eth-mobile';
+import { parseBalance } from '@/utils/eth-mobile';
 import { Ionicons } from '@expo/vector-icons';
-import { Contract, ethers, JsonRpcProvider } from 'ethers';
+import { Contract, JsonRpcProvider } from 'ethers';
 import { Link } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -35,157 +38,6 @@ type BetEvent = {
   choice: number;
   timestamp: bigint;
 };
-
-function TabButton({
-  label,
-  isActive,
-  onPress
-}: {
-  label: string;
-  isActive: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      className={`px-4 py-2 rounded-xl ${
-        isActive ? 'bg-primary' : 'bg-gray-100'
-      }`}
-    >
-      <Text
-        className={`text-sm font-[Poppins] ${
-          isActive ? 'text-white' : 'text-gray-700'
-        }`}
-      >
-        {label}
-      </Text>
-    </TouchableOpacity>
-  );
-}
-
-function BetCard({
-  bet,
-  currentAddress,
-  onMatch,
-  isMatching,
-  price
-}: {
-  bet: BetEvent;
-  currentAddress?: string;
-  onMatch: (bet: BetEvent) => void;
-  isMatching: boolean;
-  price: number | null;
-}) {
-  const isMyBet =
-    currentAddress && bet.bettor.toLowerCase() === currentAddress.toLowerCase();
-
-  const betAmount = parseBalance(bet.amount);
-  const usdAmount = price ? (Number(betAmount) * price).toFixed(2) : null;
-
-  const date = new Date(Number(bet.timestamp) * 1000);
-  const monthNames = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec'
-  ];
-  const formattedDate = `${monthNames[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
-
-  const choiceLabel = bet.choice === 0 ? 'Even' : 'Odd';
-
-  return (
-    <TouchableOpacity
-      disabled={isMyBet || isMatching}
-      onPress={() => !isMyBet && onMatch(bet)}
-      className="w-full bg-white border border-gray-200 rounded-2xl p-4 mb-3 shadow-sm"
-    >
-      <View className="flex-row items-start justify-between">
-        <View className="flex-1">
-          <Text className="text-lg font-semibold font-[Poppins] text-gray-900 mb-1">
-            {choiceLabel}
-          </Text>
-          <Text className="text-2xl font-bold font-[Poppins] text-gray-900 mb-3">
-            ${usdAmount || betAmount}
-          </Text>
-        </View>
-
-        <View className="items-end">
-          <Text className="text-lg font-semibold font-[Poppins] text-gray-500">
-            #{bet.id.toString()}
-          </Text>
-        </View>
-      </View>
-
-      <View className="flex-row items-center justify-between mt-2">
-        <Text className="text-sm text-gray-600 font-[Poppins]">
-          Placed by {truncateAddress(bet.bettor)} on {formattedDate}
-        </Text>
-        {!isMyBet && (
-          <TouchableOpacity
-            onPress={() => onMatch(bet)}
-            disabled={isMatching}
-            className="p-2"
-          >
-            {isMatching ? (
-              <ActivityIndicator size="small" color="#36C566" />
-            ) : (
-              <Ionicons name="chevron-forward" size={20} color="#36C566" />
-            )}
-          </TouchableOpacity>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-function ResultModal({
-  visible,
-  type,
-  onClose
-}: {
-  visible: boolean;
-  type: 'win' | 'lose';
-  onClose: () => void;
-}) {
-  if (!visible) return null;
-
-  const isWin = type === 'win';
-
-  return (
-    <View className="absolute inset-0 bg-black/40 items-center justify-center z-50">
-      <View className="w-[85%] bg-white rounded-3xl p-6 items-center">
-        <Ionicons
-          name={isWin ? 'trophy-outline' : 'close-circle-outline'}
-          size={52}
-          color={isWin ? '#16a34a' : '#ef4444'}
-        />
-        <Text className="mt-4 text-2xl font-[Poppins]">
-          {isWin ? 'You Won!' : 'You Lost'}
-        </Text>
-        <Text className="mt-2 text-center text-base text-gray-600 font-[Poppins]">
-          {isWin
-            ? 'Congrats! The odds were in your favor.'
-            : 'Better luck next time. Try matching another bet.'}
-        </Text>
-
-        <TouchableOpacity
-          onPress={onClose}
-          className="mt-5 bg-primary rounded-2xl px-6 py-3"
-        >
-          <Text className="text-white text-base font-[Poppins]">Close</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-}
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabType>('ACTIVE');
@@ -360,7 +212,7 @@ export default function Home() {
           Stay Schemin
         </Text>
         <Text className="text-sm text-center text-gray-600 font-[Poppins] mb-4">
-          Today might be your lucky day.
+          It's your luck against mine
         </Text>
 
         <Text className="text-4xl text-center font-bold font-[Poppins] text-green-400 mb-4">
@@ -408,7 +260,7 @@ export default function Home() {
               .slice()
               .reverse()
               .map(bet => (
-                <BetCard
+                <Bet
                   key={bet.id.toString()}
                   bet={bet}
                   currentAddress={account?.address}
@@ -438,7 +290,6 @@ export default function Home() {
         <Ionicons name="add" size={32} color="#fff" />
       </TouchableOpacity>
 
-      {/* Place Bet Modal */}
       <PlaceBetModal
         visible={showPlaceBetModal}
         onClose={() => setShowPlaceBetModal(false)}
