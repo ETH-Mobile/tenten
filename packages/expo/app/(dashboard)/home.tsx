@@ -6,6 +6,7 @@ import {
   useDeployedContractInfo,
   useNetwork,
   useScaffoldEventHistory,
+  useScaffoldReadContract,
   useScaffoldWriteContract
 } from '@/hooks/eth-mobile';
 import Bet from '@/modules/home/components/Bet';
@@ -86,6 +87,14 @@ export default function Home() {
 
   const { writeContractAsync } = useScaffoldWriteContract({
     contractName: 'TenTen'
+  });
+
+  const { data: earnings } = useScaffoldReadContract({
+    contractName: 'TenTen',
+    functionName: 's_earnings',
+    args: account?.address ? [account.address] : undefined,
+    enable: !!account?.address,
+    watch: true
   });
 
   const bets: BetEvent[] = useMemo(() => {
@@ -172,6 +181,40 @@ export default function Home() {
     const ethBalance = parseBalance(balance);
     return (Number(ethBalance) * price).toFixed(2);
   }, [balance, price]);
+
+  const earningsDisplay = useMemo(() => {
+    if (earnings === null || earnings === undefined || !price) return null;
+
+    // Convert bigint to number, handling negative values
+    const earningsBigInt = earnings as bigint;
+    const isNegative = earningsBigInt < 0n;
+    const absEarnings = isNegative ? -earningsBigInt : earningsBigInt;
+
+    // Format the absolute value in ETH
+    const formattedAmount = parseBalance(absEarnings);
+    const numericAmount = Number(formattedAmount);
+
+    // Convert to USD
+    const usdAmount = (numericAmount * price).toFixed(2);
+
+    // Determine sign and color based on the original value
+    if (earningsBigInt > 0n) {
+      return {
+        text: `+$${usdAmount}`,
+        color: '#36C566' // green
+      };
+    } else if (earningsBigInt === 0n) {
+      return {
+        text: `$${usdAmount}`,
+        color: '#36C566' // green
+      };
+    } else {
+      return {
+        text: `-$${usdAmount}`,
+        color: '#EF4444' // red
+      };
+    }
+  }, [earnings, price]);
 
   useEffect(() => {
     if (balance && price === null) {
@@ -296,9 +339,18 @@ export default function Home() {
           It's your luck against mine
         </Text>
 
-        <Text className="text-4xl text-center font-bold font-[Poppins] text-green-400 mb-4">
-          $250
-        </Text>
+        {earningsDisplay ? (
+          <Text
+            className="text-4xl text-center font-bold font-[Poppins] mb-4"
+            style={{ color: earningsDisplay.color }}
+          >
+            {earningsDisplay.text}
+          </Text>
+        ) : (
+          <Text className="text-4xl text-center font-bold font-[Poppins] text-green-400 mb-4">
+            $0.00
+          </Text>
+        )}
 
         {/* Tabs */}
         <View className="flex-row gap-x-2 mb-4">

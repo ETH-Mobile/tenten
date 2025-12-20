@@ -99,6 +99,13 @@ interface ITenTen {
     function s_betCounter() external view returns (uint256 counter);
 
     /**
+     * @notice Getter for a player's earnings/losses.
+     * @param player Address of the player.
+     * @return amount Player's net earnings (positive or negative).
+     */
+    function s_earnings(address player) external view returns (int256 amount);
+
+    /**
      * @notice Getter for the total protocol fees accrued.
      * @return fees Total fees (in wei) awaiting withdrawal.
      */

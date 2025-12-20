@@ -29,6 +29,9 @@ contract TenTen is ITenTen, Ownable {
 
     address public s_feeCollector;
 
+    // User earnings/losses tracking (int256 allows for negative values representing losses)
+    mapping(address player => int256 amount) public s_earnings;
+
     /**
      * @notice Constructor
      * @param _feeCollector The address where collected protocol fees will be sent.
@@ -83,10 +86,13 @@ contract TenTen is ITenTen, Ownable {
         DataTypes.Choice resultChoice = isEven ? DataTypes.Choice.EVEN : DataTypes.Choice.ODD;
 
         address winner;
+        address loser;
         if (bet.choice == resultChoice) {
             winner = bet.bettor;
+            loser = msg.sender;
         } else {
             winner = msg.sender;
+            loser = bet.bettor;
         }
 
         // Calculate protocol fee and send to fee collector, pay winner
@@ -96,6 +102,13 @@ contract TenTen is ITenTen, Ownable {
 
         s_bets[bet.id].winner = winner;
         s_bets[bet.id].state = DataTypes.BetState.RESOLVED;
+
+        // Update earnings: winner gains (payout - bet.amount), loser loses bet.amount
+        int256 winnerGain = int256(payout) - int256(bet.amount);
+        int256 loserLoss = -int256(bet.amount);
+
+        s_earnings[winner] += winnerGain;
+        s_earnings[loser] += loserLoss;
 
         emit BetResolved(bet.id, resultChoice, block.timestamp);
 

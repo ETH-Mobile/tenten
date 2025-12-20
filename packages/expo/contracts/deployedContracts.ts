@@ -167,6 +167,25 @@ const deployedContracts = {
         },
         {
           type: 'function',
+          name: 's_earnings',
+          inputs: [
+            {
+              name: 'player',
+              type: 'address',
+              internalType: 'address'
+            }
+          ],
+          outputs: [
+            {
+              name: 'amount',
+              type: 'int256',
+              internalType: 'int256'
+            }
+          ],
+          stateMutability: 'view'
+        },
+        {
+          type: 'function',
           name: 's_feeCollector',
           inputs: [],
           outputs: [
@@ -475,7 +494,7 @@ const deployedContracts = {
         }
       ],
       inheritedFunctions: {},
-      deploymentFile: 'run-1766209275692.json',
+      deploymentFile: 'run-1766216853290.json',
       deploymentScript: 'Deploy.s.sol'
     }
   }
